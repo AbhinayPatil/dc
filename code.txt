@@ -1,0 +1,861 @@
+****************************************Inter pc ***************************************************
+
+server side code*********
+
+import java.io.*;
+import java.net.*;
+
+public class Server {
+    public static void main(String[] args) {
+        int port = 5000; // Port on which the server will listen
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Server started. Listening on port " + port);
+
+            
+                Socket clientSocket = serverSocket.accept(); // Accept incoming client connections
+                System.out.println("Client connected: " + clientSocket.getInetAddress());
+
+                // Create input and output streams for communication
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                // ask client a que
+                System.out.println("Getting Client info........ ");
+                out.println("Pls Enter Your Name: ");
+                out.flush();
+
+                // Read the client's message
+                String message = in.readLine();
+                System.out.println("Client name: " + message);
+
+                // Respond with an acknowledgment
+                out.println("Details received");
+
+                // Close the connection
+                clientSocket.close();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+*****************
+
+Client side code ********
+
+import java.io.*;
+import java.net.*;
+
+public class Client {
+    public static void main(String[] args) {
+        String serverAddress = "localhost"; // The server's IP address (localhost for testing)
+        int port = 5000; // Port to connect to
+        
+        try {
+            Socket socket = new Socket(serverAddress, port);
+            System.out.println("Connected to server.");
+
+            // Create input and output streams for communication
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            //Example Auth question from server
+            System.out.println(in.readLine()); //display que from server
+
+            BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
+            String ans = bf.readLine();
+
+            // Send the message to the server
+            out.println(ans);
+
+            // Receive the response from the server
+            String response = in.readLine();
+            System.out.println("Received response from server:-  " + response);
+
+            // Close the connection
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+******************************************grp pc***************************************************
+
+server code***********
+
+import java.util.*;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
+public class GroupCommunicationServer {
+
+    public static void sendUDPMessage(String message, String ipAddress, int port) throws IOException {
+        DatagramSocket socket = new DatagramSocket();
+        InetAddress group = InetAddress.getByName(ipAddress);
+        byte[] msg = message.getBytes();
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, group, port);
+        socket.send(packet);
+        socket.close();
+    }
+
+    public static void main(String[] args) throws IOException {
+        Scanner sc = new Scanner(System.in);
+        String msg;
+        System.out.println("To exit, enter: \"EXIT\"");
+        System.out.println("To terminate all clients, enter: \"Terminate\" ");
+        System.out.print("Enter message: ");
+        msg = sc.nextLine();
+        while (!msg.equals("EXIT")) {
+            sendUDPMessage(msg, "230.0.0.0", 4321);
+            if (msg.equals("Terminate"))
+                break;
+            System.out.print("Enter message: ");
+            msg = sc.nextLine();
+        }
+    }
+}
+
+**************************
+
+client 1 & client 2 change name in thread *************
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+
+public class GroupCommunicationClient1 implements Runnable {
+
+    public static void main(String[] args) {
+        Thread t = new Thread(new GroupCommunicationClient1());
+        t.start();
+    }
+
+    public void receiveUDPMessage(String ip, int port) throws IOException {
+        byte[] buffer = new byte[1024];
+        MulticastSocket socket = new MulticastSocket(4321);
+        InetAddress group = InetAddress.getByName("230.0.0.0");
+        socket.joinGroup(group);
+        while (true) {
+            System.out.println("Press Ctrl+C to exit.");
+            System.out.println("Waiting for message...");
+            DatagramPacket packet = new DatagramPacket(buffer,
+                    buffer.length);
+            socket.receive(packet);
+            String msg = new String(packet.getData(),
+                    packet.getOffset(), packet.getLength());
+            System.out.println("[Multicast UDP message received]>> " + msg);
+            if (msg.equals("Terminate")) {
+                break;
+            }
+        }
+        socket.leaveGroup(group);
+        socket.close();
+    }
+
+    @Override
+    public void run() {
+        try {
+            receiveUDPMessage("230.0.0.0", 4321);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+
+***************
+
+************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*************************************************clockSync*****************************************
+
+import java.time.*;
+import java.util.*;
+
+public class Main
+{
+  public static void main(String[] args) {
+    LocalTime mainTime = LocalTime.of(10, 15);
+    LocalTime[] clocks = {
+        LocalTime.of(10, 14),
+        LocalTime.of(10, 10),
+        LocalTime.of(10, 9),
+        LocalTime.of(10, 12)
+    };
+    LocalTime[] finalClocks = new LocalTime[4];
+    int currCounter = 0;
+    int[] sumCollection = new int[4];
+    Arrays.sort(clocks,Collections.reverseOrder());
+
+    for(int i=0;i<4;i++){
+        System.out.println("\nIteration "+(i+1));
+      //  prevCounter = currCounter;
+        currCounter = (int)Duration.between(mainTime, clocks[i]).toMinutes();
+
+        for(int j=0;j<4;j++){
+            System.out.print(clocks[j].plusMinutes(Math.abs(currCounter)));
+            int currDiff = (int)Duration.between(mainTime,clocks[j]).toMinutes();
+            System.out.println("  (" + (currDiff + (Math.abs(currCounter))) + ") ");
+            sumCollection[j] += (currDiff + (Math.abs(currCounter)));
+            if(i==3){
+                finalClocks[j] = clocks[j].plusMinutes(Math.abs(currCounter));
+            }
+        }
+    }
+    System.out.println("\n\n");
+    for(int i=0;i<4;i++){
+        System.out.println("current time: " + finalClocks[i] + "  " + "Deviation: " + ((double)sumCollection[i]/4) + " \t\t");
+    }
+
+    System.err.println("\nFinal time: " + finalClocks[0].minusMinutes(sumCollection[0]/4));
+  }
+}
+
+
+
+**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+***************************************Berkley******************************************************
+import java.time.*;
+
+public class Berkley {
+    public static void main(String[] args) {
+        LocalTime master =  LocalTime.of(3,00);
+        LocalTime[] clocks =  {
+            LocalTime.of(2,50),
+            LocalTime.of(3,25),
+        };
+        int sumOfdifferences = 0;
+        int[] diffs = new int[clocks.length];
+        System.out.println("master time: " + master);
+        for(int i=0;i<clocks.length;i++){
+            int diff = (int)Duration.between(master, clocks[i]).toMinutes();
+            diffs[i] = diff;
+            System.out.println("Diff between master and clock"+(i+1)+": " + diff + "\t[ "+ clocks[i] + " ]");
+            sumOfdifferences+= diff;
+        }
+        System.out.println("sum of diff: "+sumOfdifferences);
+        int avg = sumOfdifferences/(clocks.length +1);
+        System.out.println("avg diff: "+ avg);
+
+        System.out.println("\n\n Updated time:");
+        System.out.println("Master: " + master.plusMinutes(avg));
+        for(int i=0;i<clocks.length;i++){
+            System.out.println("clock"+(i+1)+" :- " + clocks[i].plusMinutes(avg-diffs[i]));
+        }
+    }
+}
+
+
+************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+************************************************Bully**********************************************
+
+import java.util.*;
+
+class Process {
+    private int processId;
+    private boolean isCoordinator;
+    private boolean isAlive;
+
+    public Process(int processId) {
+        this.processId = processId;
+        this.isCoordinator = false;
+        this.isAlive = true;
+    }
+
+    public int getProcessId() {
+        return processId;
+    }
+
+    public boolean isCoordinator() {
+        return isCoordinator;
+    }
+
+    public void setCoordinator(boolean coordinator) {
+        isCoordinator = coordinator;
+    }
+    public boolean isAlive() {
+        return isAlive;
+    }
+    public void setStatus(boolean status){
+        isAlive = status;
+    }
+}
+
+public class BullyAlgorithm {
+    private List<Process> processes = new ArrayList<>();
+    
+    public void addProcess(Process process) {
+        processes.add(process);
+    }
+
+
+
+    public void initiateElection(int initiatingProcessId) {
+        System.out.println("Election initiated by Process " + initiatingProcessId);
+
+        for (Process process : processes) {
+            if (process.getProcessId() > initiatingProcessId) {
+                System.out.println("Process " + initiatingProcessId + " sends Election message to Process "
+                        + process.getProcessId());
+            }
+        }
+
+        int highestId = Collections.max(processes, (p1, p2) -> Integer.compare(p1.getProcessId(), p2.getProcessId()))
+                .getProcessId();
+        System.out.println("Process " + highestId + " acknowledges the Election and becomes the new Coordinator.");
+
+        for (Process process : processes) {
+            process.setCoordinator(process.getProcessId() == highestId);
+        }
+    }
+
+    public static void main(String[] args) {
+        BullyAlgorithm electionSimulator = new BullyAlgorithm();
+        Scanner scanner = new Scanner(System.in);
+
+        // Taking user input for the number of processes
+        System.out.print("Enter the number of processes: ");
+        int numProcesses = scanner.nextInt();
+
+        // Adding processes with user-specified process IDs
+        for (int i = 1; i <= numProcesses; i++) {
+            electionSimulator.addProcess(new Process(i));
+        }
+
+        // Taking user input for the initiating process ID
+        System.out.print("Enter the process ID to initiate the election: ");
+        int initiatingProcessId = scanner.nextInt();
+
+        // Initiating election based on user input
+        electionSimulator.initiateElection(initiatingProcessId);
+
+        // Closing the scanner
+        scanner.close();
+    }
+}
+
+
+**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+****************************************************bankers**************************************
+
+import java.util.*;
+
+
+public class Main {
+  private int[][] maximum;
+  private int[][] allocation;
+  private int[][] need;
+  private int[] available;
+  private int numberOfProcesses;
+  private int numberOfResources;
+
+  public Main(int numberOfProcesses, int numberOfResources) {
+    this.numberOfProcesses = numberOfProcesses;
+    this.numberOfResources = numberOfResources;
+    maximum = new int[numberOfProcesses][numberOfResources];
+    allocation = new int[numberOfProcesses][numberOfResources];
+    need = new int[numberOfProcesses][numberOfResources];
+    available = new int[numberOfResources];
+  }
+
+  public void setMaximum(int process, int[] max) {
+    maximum[process] = max.clone();
+  }
+
+  public void setAllocation(int process, int[] alloc) {
+    allocation[process] = alloc.clone();
+  }
+
+  public void setAvailable(int[] avail) {
+    available = avail.clone();
+  }
+
+  public ArrayList<Integer> getSafeSequence() {
+    ArrayList<Integer> safeSequence = new ArrayList<Integer>();
+    int[] work = available.clone();
+    boolean[] finish = new boolean[numberOfProcesses];
+    int count = 0;
+
+    while (count < numberOfProcesses) {
+      boolean found = false;
+      for (int i = 0; i < numberOfProcesses; i++) {
+
+        if (!finish[i]) {
+          boolean canAllocate = true;
+          for (int j = 0; j < numberOfResources; j++) {
+            need[i][j] = maximum[i][j] - allocation[i][j];
+            if (need[i][j] > work[j]) {
+              canAllocate = false;
+              break;
+            }
+          }
+          if (canAllocate) {
+            for (int j = 0; j < numberOfResources; j++) {
+              work[j] += allocation[i][j];
+            }
+            finish[i] = true;
+            count++;
+            safeSequence.add(i); // Add the process to the safe sequence
+            found = true;
+          }
+        }
+      }
+      if (!found) {
+        return null; // No safe sequence found
+      }
+    }
+    return safeSequence;
+  }
+
+  public static void main(String[] args) {
+    Scanner scanner = new Scanner(System.in);
+
+    System.out.print("Enter number of processes: ");
+    int numberOfProcesses = scanner.nextInt();
+    System.out.print("Enter number of resources: ");
+    int numberOfResources = scanner.nextInt();
+
+    Main banker = new Main(numberOfProcesses, numberOfResources);
+
+    // Input maximum resources
+    for (int i = 0; i < numberOfProcesses; i++) {
+      System.out.print("Enter maximum resources for process " + i + ": ");
+      int[] max = new int[numberOfResources];
+      for (int j = 0; j < numberOfResources; j++) {
+        max[j] = scanner.nextInt();
+      }
+      banker.setMaximum(i, max);
+    }
+
+    // Input allocated resources
+    for (int i = 0; i < numberOfProcesses; i++) {
+      System.out.print("Enter allocated resources for process " + i + ": ");
+      int[] alloc = new int[numberOfResources];
+      for (int j = 0; j < numberOfResources; j++) {
+        alloc[j] = scanner.nextInt();
+      }
+      banker.setAllocation(i, alloc);
+    }
+
+    // Input available resources
+    System.out.print("Enter available resources: ");
+    int[] avail = new int[numberOfResources];
+    for (int i = 0; i < numberOfResources; i++) {
+      avail[i] = scanner.nextInt();
+    }
+    banker.setAvailable(avail);
+
+    ArrayList<Integer> safeSequence = banker.getSafeSequence();
+    if (safeSequence != null) {
+      System.out.println("Safe state: System can allocate resources to all processes.");
+      System.out.println("Safe sequence: " + safeSequence);
+    } else {
+      System.out.println("Unsafe state: System cannot allocate resources to all processes.");
+    }
+  }
+}
+
+
+
+**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+******************************************Raymond****************************************************
+
+# no. of nodes
+n = 5
+
+request_queue = {0: [], 1: [], 2: [], 3: [], 4: []}
+holder = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1}
+token = {0: 1, 1: 0, 2: 0, 3: 0, 4: 0}
+
+adj_matrix = [[1, 0, 0, 0, 0],
+              [1, 0, 0, 0, 0],
+              [1, 0, 0, 0, 0],
+              [0, 1, 0, 0, 0],
+              [0, 1, 0, 0, 0]]
+
+print("\nRaymond Tree Based Mutual Exclusion")
+print("\nAdjacency Matrix for spanning tree:\n")
+
+for i in adj_matrix:
+    print(*i)  # printing values as individual elements and not as a list
+
+# Process that wants to enter CS
+req_process = int(input("\nEnter the process who wants to enter CS : "))
+
+
+def find_parent(req_process):
+
+    # Sending the request to the root that has the token
+    request_queue[req_process].append(req_process)  # 3: [3]
+
+    for i in range(n):
+        if(adj_matrix[req_process][i] == 1):  # if req_process is pointing to the node i
+            parent = i  # node number 1 is the parent
+            # node no.1 appends node no.3(req_process) in its req_q
+            request_queue[parent].append(req_process)
+            break
+
+    print("\nProcess {} sending request to Parent Process {}".format(
+        req_process, parent))
+    print("Request queue: ", request_queue)
+
+    # checking if parent has the token or not
+    if(token[parent] == 1):
+        return parent
+    else:
+        parent = find_parent(parent)
+
+    return parent
+
+
+parent = find_parent(req_process)
+
+while(token[req_process] != 1):  # while 3 does not have token
+
+    child = request_queue[parent][0]  # 1 (child of 0)
+    request_queue[parent].pop(0)  # removing 1 from req_q list of node no.0
+
+    holder[parent] = child  # node 0 pointing to node 1
+    holder[child] = 0  # node 1 not pointing to any node
+    token[parent] = 0  # token is no longer with node 0
+    token[child] = 1  # token is with node 1
+
+    print("\nParent process {} has the token and sends the token to the request process {}".format(
+        parent, child))
+    print("Request Queue: ", request_queue)
+    parent = child
+
+if(token[parent] == 1 and request_queue[parent][0] == parent):
+    request_queue[parent].pop(0)
+    # holder variable for the node which has the token points to itself
+    holder[parent] = parent
+    print("\nProcess {} enter the Critical Section".format(parent))
+    print("Request Queue: ", request_queue)
+
+if(len(request_queue[parent]) == 0):
+    print("\nRequest Queue of process {} is empty. Therefore Release Critical Section".format(parent))
+
+print("\nHolder: ", holder)
+
+
+*****************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*************************************************Ricart*********************************************
+
+numProcesses = int(input("Enter number of processes: "))
+numCS = int(input("Enter Number of processes that want to enter CS: "))
+# timestamp: process
+processMap = {}
+timestamps = []
+for i in range(numCS):
+    process, timestamp = input(f"Enter the Process ID and Timestamp of process: ").split()
+    processMap[int(timestamp)] = int(process)
+    timestamps.append(int(timestamp))
+print()
+timestamps.sort()
+for time in timestamps:
+    processCS = processMap[time]
+    for i in range(numProcesses):
+        if(processCS != i):
+            print(f"Process {processCS} has requested Process {i}")
+    print()
+for time in timestamps:
+    processCS = processMap[time]
+    for i in range(numProcesses):
+        if(processCS != i):
+            print(
+                f"Process {i} has Accepted the request of process {processCS}")
+    print()
+    print(f'Process {processCS} has now entered the CS')
+    print(f'Process {processCS} has now exited the CS')
+    print()
+
+***************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+************************************LoadBalancing**************************************************
+
+import java.util.Scanner;
+
+public class LoadBalancing {
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter no of servers: ");
+        int numServers = sc.nextInt();
+        System.out.print("Enter no of processes: ");
+        int numProcesses = sc.nextInt();
+
+        while (true) {
+            printServerLoad(numServers, numProcesses);
+            displayMenu();
+            System.out.print("> ");
+            int choice = sc.nextInt();
+            int temp;
+
+            switch (choice) {
+                case 1:
+                    System.out.println("Enter number of servers to be added: ");
+                    temp = sc.nextInt();
+                    numServers += temp;
+                    break;
+                case 2:
+                    System.out.println("Enter number of servers to be removed: ");
+                    temp = sc.nextInt();
+                    numServers -= temp;
+                    break;
+                case 3:
+                    System.out.println("Enter number of processes to be added: ");
+                    temp = sc.nextInt();
+                    numProcesses += temp;
+                    break;
+                case 4:
+                    System.out.println("Enter number of processes to be removed: ");
+                    temp = sc.nextInt();
+                    numProcesses -= temp;
+                    break;
+                case 5:
+                    sc.close();
+                    return;
+                default:
+                    break;
+            }
+        }
+    }
+
+    static void printServerLoad(int numServers, int numProcesses) {
+        int processesPerServer = numProcesses / numServers;
+        int extraProcesses = numProcesses % numServers;
+
+        int i = 0;
+
+        // loop for extra process i.e adding 1 to each server
+        for (i = 0; i < extraProcesses; i++)
+            System.out.println("Server " + (i + 1) + " has " + (processesPerServer + 1) + " processes");
+
+        // loop for remaining processes
+        for (; i < numServers; i++)
+            System.out.println("Server " + (i + 1) + " has " + processesPerServer + " processes");
+    }
+
+    static void displayMenu() {
+        System.out.println("1. Add Server");
+        System.out.println("2. Remove Server");
+        System.out.println("3. Add Processes");
+        System.out.println("4. Remove Processes");
+        System.out.println("5. Exit");
+    }
+}
+
+
+**************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+***************************************Multithreading**********************************************
+
+class ThreadClass extends Thread{
+    private int ThreadNumber;
+    ThreadClass(int ThreadNumber){
+        this.ThreadNumber = ThreadNumber;
+    }
+    @Override
+    public void run(){
+        for(int i=0;i<5;i++){
+            System.out.println(i+ " thread " + ThreadNumber);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+            }
+        }
+    }
+}
+
+class RunnableInterface implements Runnable {
+    private int ThreadNumber;
+    RunnableInterface(int ThreadNumber){
+        this.ThreadNumber = ThreadNumber;
+    }
+    @Override
+    public void run() {
+        for(int i=0;i<5;i++){
+            System.out.println(i + " Thread " + ThreadNumber);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+
+
+
+public class Main{
+    public static void main(String[] args) {
+        // using extends method(class)
+        ThreadClass myThreadClass1 = new ThreadClass(0);
+        myThreadClass1.start();
+
+        ThreadClass myThreadClass2 = new ThreadClass(1);
+        myThreadClass2.start();
+
+        // using implements method(interface)
+        RunnableInterface runnableInterface1= new RunnableInterface(2);
+        Thread thread1 = new Thread(runnableInterface1);
+        thread1.start();
+
+        RunnableInterface runnableInterface2 = new RunnableInterface(3);
+        Thread thread2 = new Thread(runnableInterface2);
+        thread2.start();
+    }
+}
+
+
+****************************************************************************************************
